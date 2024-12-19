@@ -19,10 +19,13 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import ru.denis.simple_notepad.exception.JwtAuthenticationException;
+import ru.denis.simple_notepad.model.Person;
 import ru.denis.simple_notepad.service.PeopleService;
 
 import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class JwtProvider {

@@ -25,4 +25,8 @@ public class PeopleService implements UserDetailsService {
         System.out.println("its work");
         return PersonSecurity.fromPerson(person);
     }
+
+    public UserDetailsService userDetailsService() {
+        return this::loadUserByUsername;
+    }
 }

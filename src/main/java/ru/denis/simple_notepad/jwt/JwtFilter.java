@@ -5,6 +5,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -13,37 +16,27 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.GenericFilterBean;
+import org.springframework.web.filter.OncePerRequestFilter;
 import ru.denis.simple_notepad.exception.JwtAuthenticationException;
+import ru.denis.simple_notepad.service.PeopleService;
 
 import java.io.IOException;
 
 @Component
-public class JwtFilter extends GenericFilterBean {
+@RequiredArgsConstructor
+public class JwtFilter extends OncePerRequestFilter {
+    public static final String BEARER_PREFIX = "Bearer ";
+    public static final String HEADER_NAME = "Authorization";
     private final JwtProvider provider;
+    private final PeopleService peopleService;
 
-    public JwtFilter(JwtProvider provider) {
-        this.provider = provider;
-    }
 
-    @SneakyThrows
     @Override
-    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
-        String token = provider.resolveToken((HttpServletRequest) servletRequest);
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain) throws ServletException, IOException {
+        var authHeader = request.getHeader(HEADER_NAME);
 
-        try {
-            if(token != null && provider.validateToken(token)) {
-                Authentication authentication = provider.getAuthentication(token);
-
-                if(authentication != null) {
-                    System.out.println("its good");
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                }
-            }
-        } catch(AuthenticationException e) {
-            SecurityContextHolder.clearContext();
-            e.printStackTrace();
-            throw  new JwtAuthenticationException(HttpStatus.UNAUTHORIZED);
-        }
-        filterChain.doFilter(servletRequest, servletResponse);
     }
 }
