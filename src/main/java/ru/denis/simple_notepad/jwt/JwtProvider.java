@@ -1,10 +1,11 @@
 package ru.denis.simple_notepad.jwt;
 
-import io.jsonwebtoken.Claims;
 
-import io.jsonwebtoken.Jws;
+
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
@@ -22,6 +23,8 @@ import ru.denis.simple_notepad.exception.JwtAuthenticationException;
 import ru.denis.simple_notepad.model.Person;
 import ru.denis.simple_notepad.service.PeopleService;
 
+import javax.crypto.SecretKey;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
@@ -36,56 +39,43 @@ public class JwtProvider {
     @Value("${jwt.expiration}")
     private long expiration;
 
-    private final PeopleService service;
 
-    public JwtProvider(@Qualifier("peopleService") PeopleService service) {
-        this.service = service;
-    }
-
-    @PostConstruct
-    protected void init() {
-        secret = Base64.getEncoder().encodeToString(secret.getBytes());
-    }
-
-    public String createToken(String username, String role) {
-        Claims claims = Jwts.claims().setSubject(username);
-
-        claims.put("role", role);
-
-        Date now = new Date();
-        Date expDate = new Date(now.getTime() + expiration * 1000L);
+    public String createToken(UserDetails userDetails) {
+        Map<String, String> claims = new HashMap<>();
+        claims.put("iss", "http://secure.genuinecider.com");
 
         return Jwts.builder()
-                .setClaims(claims)
-                .setIssuedAt(now)
-                .setExpiration(expDate)
-                .signWith(SignatureAlgorithm.HS256, secret)
+                .claims(claims)
+                .subject(userDetails.getUsername())
+                .issuedAt(Date.from(Instant.now()))
+                .expiration(Date.from(Instant.now().plusMillis(expiration * 1000)))
+                .signWith(generateKey())
                 .compact();
     }
 
-    @SneakyThrows
-    public boolean validateToken(String token) {
-        try {
-            System.out.println(token);
-            Jws<Claims> claimsJws = Jwts.parser().setSigningKey(secret).parseClaimsJws(token);
+    private SecretKey generateKey() {
+        byte[] decodedKey = Base64.getDecoder().decode(secret);
 
-            return !claimsJws.getBody().getExpiration().before(new Date());
-        } catch(AuthenticationException | IllegalArgumentException exception) {
-            throw new JwtAuthenticationException("Jwt token is invalid or expired", HttpStatus.UNAUTHORIZED);
-        }
+        return Keys.hmacShaKeyFor(decodedKey);
     }
 
-    public String getUsername(String token) {
-        return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody().getSubject();
+    public String extractUsername(String jwt) {
+        Claims claims = getClaims(jwt);
+
+        return claims.getSubject();
     }
 
-    public Authentication getAuthentication(String token) {
-        UserDetails userDetails = this.service.loadUserByUsername(getUsername(token));
+    public boolean validateToken(String jwt) {
+        Claims claims = getClaims(jwt);
 
-        return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
+        return claims.getExpiration().after(new Date());
     }
 
-    public String resolveToken(HttpServletRequest request) {
-        return request.getHeader(header);
+    public Claims getClaims(String jwt) {
+        return Jwts.parser()
+                .verifyWith(generateKey())
+                .build()
+                .parseSignedClaims(jwt)
+                .getPayload();
     }
 }

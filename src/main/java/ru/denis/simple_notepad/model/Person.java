@@ -2,6 +2,7 @@ package ru.denis.simple_notepad.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import java.util.List;
 
 import java.util.Date;
 
@@ -23,11 +24,13 @@ public class Person {
     @Column(name = "created_at")
     private Date created_at;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "role")
-    private Role role;
+    private String role;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private Status status;
+    private String status;
+
+    @OneToMany(mappedBy = "person", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Note> notes;
+
 }

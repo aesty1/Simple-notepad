@@ -14,15 +14,15 @@ public class Note {
     @Column(name = "note_id")
     private int id;
 
-    @Column(name = "name")
-    private String name;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "person_id", nullable = false)
+    private Person person;
+
+    @Column(name = "title")
+    private String title;
 
     @Column(name = "content")
     private String content;
-
-    @ManyToOne
-    @JoinColumn(name = "person_id")
-    private Person person;
 
     @Column(name = "created_at")
     private Date created_at;

@@ -4,8 +4,11 @@ import jakarta.servlet.Filter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -13,7 +16,10 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractAuthenticationFilterConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -24,11 +30,13 @@ import ru.denis.simple_notepad.service.PeopleService;
 
 @Configuration
 @EnableWebSecurity
+@ComponentScan("ru.denis.simple_notepad")
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
     private final PeopleService service;
     private final JwtFilter filter;
 
+    @Autowired
     public SecurityConfig(@Qualifier("peopleService") PeopleService service, JwtFilter filter) {
         this.service = service;
         this.filter = filter;
@@ -37,25 +45,29 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
-                .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
-                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .cors(cors -> cors.disable())
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/auth/login").permitAll()
+                        .requestMatchers("/", "auth/**", "/authenticate", "/register").permitAll()
+                        .requestMatchers("/user/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
 
                 )
-                .formLogin(Customizer.withDefaults())
-                .authenticationProvider(provider())
+                .formLogin(AbstractAuthenticationFilterConfigurer::permitAll)
                 .csrf(csrf -> csrf.disable())
-                .build();
+                .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
+                        .build();
 
 
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
+    public UserDetailsService userDetailsService() {
+        return service;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager() throws Exception {
+     return new ProviderManager(provider());
     }
 
     @Bean

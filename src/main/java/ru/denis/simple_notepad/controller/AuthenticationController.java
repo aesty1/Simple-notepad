@@ -16,4 +16,9 @@ public class AuthenticationController {
     public String successPage() {
         return "success";
     }
+
+    @GetMapping("/register")
+    public String registerPage() {
+        return "register";
+    }
 }

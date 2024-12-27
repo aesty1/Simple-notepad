@@ -7,51 +7,41 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.web.bind.annotation.*;
 import ru.denis.simple_notepad.jwt.JwtProvider;
+import ru.denis.simple_notepad.model.LoginForm;
 import ru.denis.simple_notepad.model.Person;
 import ru.denis.simple_notepad.repository.PeopleRepository;
+import ru.denis.simple_notepad.service.PeopleService;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/auth")
 public class AuthenticationRestController {
-    private final AuthenticationManager manager;
-    private PeopleRepository repository;
+    @Autowired
+    private AuthenticationManager manager;
+
+    @Autowired
     private JwtProvider provider;
 
     @Autowired
-    public AuthenticationRestController(AuthenticationManager manager, PeopleRepository repository, JwtProvider provider) {
-        this.manager = manager;
-        this.repository = repository;
-        this.provider = provider;
-    }
+    private PeopleService peopleService;
 
-    @RequestMapping(value = "/login", method = RequestMethod.POST)
-    public ResponseEntity<?> login(@RequestBody AuthenticationDTO request) {
-        try {
-            manager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
-            Person person = repository.findByUsername(request.getUsername());
-            String token = provider.createToken(request.getUsername(), person.getRole().name());
-            Map<Object, Object> response = new HashMap<>();
-            response.put("username", request.getUsername());
-            response.put("token", token);
+    @PostMapping("/authenticate")
+    public String authenticate(@RequestBody LoginForm loginForm) {
+        Authentication authentication = manager.authenticate(new UsernamePasswordAuthenticationToken(
+                loginForm.username(), loginForm.password()
+        ));
 
-            return ResponseEntity.ok(response);
+        if(authentication.isAuthenticated()) {
+            return provider.createToken(peopleService.loadUserByUsername(loginForm.username()));
+        } else {
+            throw new UsernameNotFoundException("Bad credentials");
         }
-        catch(AuthenticationException e) {
-            return new ResponseEntity<>("Invalid username/password combination", HttpStatus.FORBIDDEN);
-        }
-    }
-
-    @RequestMapping(value = "/logout", method = RequestMethod.POST)
-    public void logout(HttpServletRequest request, HttpServletResponse response) {
-        SecurityContextLogoutHandler handler = new SecurityContextLogoutHandler();
-
-        handler.logout(request, response, null);
     }
 }
