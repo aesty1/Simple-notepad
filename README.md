@@ -12,3 +12,4 @@ Navigation:
     All notes - /notes
     One note - /notes/{id}
 
+![Uploading image.png…]()
