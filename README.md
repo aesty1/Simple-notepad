@@ -12,4 +12,7 @@ Navigation:
     All notes - /notes
     One note - /notes/{id}
 
+Screenshots:
+![image](https://github.com/user-attachments/assets/c82f75d1-f813-49b1-9a6f-5793e8265a90)
+![image](https://github.com/user-attachments/assets/2c1633fe-c888-4246-a0e7-d58d4e71d3c3)
 ![Uploading image.png…]()
