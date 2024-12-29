@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
@@ -31,7 +32,7 @@ import ru.denis.simple_notepad.service.PeopleService;
 @Configuration
 @EnableWebSecurity
 @ComponentScan("ru.denis.simple_notepad")
-@EnableGlobalMethodSecurity(prePostEnabled = true)
+@EnableJpaRepositories
 public class SecurityConfig {
     private final PeopleService service;
     private final JwtFilter filter;
@@ -47,7 +48,7 @@ public class SecurityConfig {
         return httpSecurity
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/", "auth/**", "/authenticate", "/register").permitAll()
-                        .requestMatchers("/user/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/user/**", "notes/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
 
